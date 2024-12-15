@@ -190,6 +190,33 @@
         }
     }
 
+    // Отправка заявки с подтверждением
+    function sendFriendRequest() {
+        const nickname = getNickname();
+        if (!nickname) {
+            alert("Сначала сохраните никнейм!");
+            return;
+        }
+        const friendName = prompt("Введите имя друга:");
+        if (friendName) {
+            const confirmation = confirm(`Вы действительно хотите отправить заявку в друзья ${friendName}?`);
+            if (confirmation) {
+                alert("Заявка отправлена!");
+                saveSentRequest(friendName); // Сохраняем отправленную заявку
+            }
+        } else {
+            alert("Введите имя друга!");
+        }
+    }
+
+    // Сохранение отправленных заявок
+    function saveSentRequest(friendName) {
+        const sentRequests = JSON.parse(localStorage.getItem('sentRequests')) || [];
+        sentRequests.push({ nickname: friendName });
+        localStorage.setItem('sentRequests', JSON.stringify(sentRequests));
+        updateSentList();
+    }
+
     // Для отображения списка отправленных предложений
     function updateSentList() {
         const sentRequests = JSON.parse(localStorage.getItem('sentRequests')) || [];
@@ -197,19 +224,6 @@
         listElement.innerHTML = '';
         sentRequests.forEach((request, index) => {
             listElement.innerHTML += `<div class="friend-request">${request.nickname} <button onclick="withdrawRequest(${index})">Отозвать</button></div>`;
-        });
-    }
-
-    // Для отображения списка ожидающих ответа
-    function updatePendingList() {
-        const pendingRequests = JSON.parse(localStorage.getItem('pendingRequests')) || [];
-        const listElement = document.getElementById('pending-list');
-        listElement.innerHTML = '';
-        pendingRequests.forEach((request, index) => {
-            listElement.innerHTML += `<div class="friend-request">${request.nickname} 
-                <button onclick="acceptRequest(${index})">Принять</button> 
-                <button onclick="declineRequest(${index})">Отклонить</button>
-            </div>`;
         });
     }
 
@@ -221,25 +235,6 @@
         updateSentList();
     }
 
-    // Принять заявку
-    function acceptRequest(index) {
-        const pendingRequests = JSON.parse(localStorage.getItem('pendingRequests')) || [];
-        const acceptedRequest = pendingRequests.splice(index, 1)[0];
-        const friends = JSON.parse(localStorage.getItem('friends')) || [];
-        friends.push(acceptedRequest);
-        localStorage.setItem('friends', JSON.stringify(friends));
-        localStorage.setItem('pendingRequests', JSON.stringify(pendingRequests));
-        updatePendingList();
-    }
-
-    // Отклонить заявку
-    function declineRequest(index) {
-        const pendingRequests = JSON.parse(localStorage.getItem('pendingRequests')) || [];
-        pendingRequests.splice(index, 1);
-        localStorage.setItem('pendingRequests', JSON.stringify(pendingRequests));
-        updatePendingList();
-    }
-
     // Инициализация
     function init() {
         const nickname = getNickname();
@@ -248,7 +243,6 @@
             generateQRCode(); // Генерация QR кода сразу, если никнейм сохранен
         }
         updateSentList();
-        updatePendingList();
     }
 
     init();
