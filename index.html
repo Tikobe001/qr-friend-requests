@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Заявки в друзья</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #0d1b2a;
+            color: white;
+            margin: 0;
+            padding: 0;
+            text-align: center;
+        }
+        header {
+            background-color: #1d2d44;
+            padding: 20px;
+        }
+        h1 {
+            color: #00bfff;
+        }
+        .container {
+            padding: 20px;
+        }
+        input, button {
+            padding: 10px;
+            margin: 10px;
+            font-size: 16px;
+            border-radius: 5px;
+            border: none;
+        }
+        input[type="text"] {
+            width: 80%;
+            max-width: 300px;
+        }
+        button {
+            background-color: #00bfff;
+            color: white;
+            cursor: pointer;
+        }
+        .tabs {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+        }
+        .tab {
+            background-color: #1d2d44;
+            color: white;
+            padding: 10px 20px;
+            margin: 0 10px;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+        .tab.active {
+            background-color: #00bfff;
+        }
+        .content {
+            display: none;
+        }
+        .content.active {
+            display: block;
+        }
+        #qrcode {
+            margin-top: 20px;
+        }
+        #camera {
+            margin-top: 20px;
+        }
+        .friend-request {
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>Добавление друзей через QR-код</h1>
+</header>
+
+<div class="container">
+    <div id="nickname-section">
+        <input type="text" id="nickname" placeholder="Придумайте ник-нейм" />
+        <button onclick="saveNickname()">Сохранить никнейм</button>
+    </div>
+
+    <div id="main-section" style="display: none;">
+        <div class="tabs">
+            <div class="tab" onclick="showTab('qr')">QR</div>
+            <div class="tab" onclick="showTab('sent')">Отправленные предложения</div>
+            <div class="tab" onclick="showTab('pending')">Ожидающие ответа</div>
+        </div>
+
+        <!-- Вкладка QR -->
+        <div id="qr" class="content active">
+            <div>
+                <canvas id="qrcode"></canvas>
+            </div>
+            <button onclick="generateQRCode()">Создать QR код</button>
+            <br>
+            <button onclick="openCamera()">Добавить через QR</button>
+        </div>
+
+        <!-- Вкладка Отправленные предложения -->
+        <div id="sent" class="content">
+            <h3>Отправленные предложения</h3>
+            <div id="sent-list"></div>
+        </div>
+
+        <!-- Вкладка Ожидающие ответы -->
+        <div id="pending" class="content">
+            <h3>Ожидающие ответы</h3>
+            <div id="pending-list"></div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+
+<script>
+    // Сохранение и получение никнейма
+    function saveNickname() {
+        const nickname = document.getElementById('nickname').value;
+        if (nickname) {
+            localStorage.setItem('nickname', nickname); // Сохраняем никнейм в localStorage
+            alert("Никнейм сохранен!");
+            showMainSection();
+            generateQRCode(); // Генерируем QR код сразу
+        } else {
+            alert("Введите никнейм!");
+        }
+    }
+
+    // Получение никнейма из localStorage
+    function getNickname() {
+        return localStorage.getItem('nickname');
+    }
+
+    // Показ основного интерфейса
+    function showMainSection() {
+        document.getElementById('nickname-section').style.display = 'none';
+        document.getElementById('main-section').style.display = 'block';
+        updateTabs();
+    }
+
+    // Показ вкладок
+    function showTab(tab) {
+        // Скрыть все вкладки
+        document.querySelectorAll('.content').forEach(contentElem => contentElem.classList.remove('active'));
+
+        // Убрать активность с всех вкладок
+        document.querySelectorAll('.tab').forEach(tabElem => tabElem.classList.remove('active'));
+
+        // Сделать вкладку активной
+        document.getElementById(tab).classList.add('active');
+        const activeTab = document.querySelector(`.tab[onclick="showTab('${tab}')"]`);
+        activeTab.classList.add('active');
+    }
+
+    // Генерация QR-кода
+    function generateQRCode() {
+        const nickname = getNickname();
+        if (!nickname) {
+            alert("Сначала сохраните никнейм!");
+            return;
+        }
+        const data = `friend_request?nickname=${nickname}`;
+        QRCode.toCanvas(document.getElementById('qrcode'), data, function (error) {
+            if (error) console.error(error);
+        });
+    }
+
+    // Открытие камеры для сканирования QR-кода
+    function openCamera() {
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+            navigator.mediaDevices.getUserMedia({ video: true })
+                .then(function(stream) {
+                    const video = document.createElement('video');
+                    video.srcObject = stream;
+                    video.play();
+                    document.getElementById('camera').innerHTML = '';
+                    document.getElementById('camera').appendChild(video);
+                    // Здесь можно добавить код для сканирования QR-кода с видео потока
+                })
+                .catch(function(err) {
+                    alert("Не удалось открыть камеру: " + err.message);
+                });
+        } else {
+            alert("Ваш браузер не поддерживает доступ к камере.");
+        }
+    }
+
+    // Для отображения списка отправленных предложений
+    function updateSentList() {
+        const sentRequests = JSON.parse(localStorage.getItem('sentRequests')) || [];
+        const listElement = document.getElementById('sent-list');
+        listElement.innerHTML = '';
+        sentRequests.forEach((request, index) => {
+            listElement.innerHTML += `<div class="friend-request">${request.nickname} <button onclick="withdrawRequest(${index})">Отозвать</button></div>`;
+        });
+    }
+
+    // Для отображения списка ожидающих ответа
+    function updatePendingList() {
+        const pendingRequests = JSON.parse(localStorage.getItem('pendingRequests')) || [];
+        const listElement = document.getElementById('pending-list');
+        listElement.innerHTML = '';
+        pendingRequests.forEach((request, index) => {
+            listElement.innerHTML += `<div class="friend-request">${request.nickname} 
+                <button onclick="acceptRequest(${index})">Принять</button> 
+                <button onclick="declineRequest(${index})">Отклонить</button>
+            </div>`;
+        });
+    }
+
+    // Отозвать предложение
+    function withdrawRequest(index) {
+        const sentRequests = JSON.parse(localStorage.getItem('sentRequests')) || [];
+        sentRequests.splice(index, 1);
+        localStorage.setItem('sentRequests', JSON.stringify(sentRequests));
+        updateSentList();
+    }
+
+    // Принять заявку
+    function acceptRequest(index) {
+        const pendingRequests = JSON.parse(localStorage.getItem('pendingRequests')) || [];
+        const acceptedRequest = pendingRequests.splice(index, 1)[0];
+        const friends = JSON.parse(localStorage.getItem('friends')) || [];
+        friends.push(acceptedRequest);
+        localStorage.setItem('friends', JSON.stringify(friends));
+        localStorage.setItem('pendingRequests', JSON.stringify(pendingRequests));
+        updatePendingList();
+    }
+
+    // Отклонить заявку
+    function declineRequest(index) {
+        const pendingRequests = JSON.parse(localStorage.getItem('pendingRequests')) || [];
+        pendingRequests.splice(index, 1);
+        localStorage.setItem('pendingRequests', JSON.stringify(pendingRequests));
+        updatePendingList();
+    }
+
+    // Инициализация
+    function init() {
+        const nickname = getNickname();
+        if (nickname) {
+            showMainSection();
+            generateQRCode(); // Генерация QR кода сразу, если никнейм сохранен
+        }
+        updateSentList();
+        updatePendingList();
+    }
+
+    init();
+</script>
+
+</body>
+</html>
